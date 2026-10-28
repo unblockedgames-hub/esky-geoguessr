@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Escanaba Guessr - Multiplayer Custom GeoGuessr</title>
+  <title>Esky GeoGuessr - Multiplayer Custom GeoGuessr</title>
 
   <!-- Socket.io from CDN for universal GitHub Pages + Render support -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
@@ -112,53 +112,6 @@
       background: linear-gradient(135deg, #60a5fa, #a78bfa, #34d399);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-    }
-
-    .server-status-pill {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      background: rgba(255, 255, 255, 0.06);
-      padding: 6px 14px;
-      border-radius: 100px;
-      border: 1px solid var(--card-border);
-      font-size: 0.8rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .server-status-pill:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.25);
-    }
-
-    .status-indicator-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #94a3b8;
-    }
-
-    .server-status-pill.online .status-indicator-dot {
-      background: #10b981;
-      box-shadow: 0 0 8px #10b981;
-    }
-
-    .server-status-pill.connecting .status-indicator-dot {
-      background: #f59e0b;
-      box-shadow: 0 0 8px #f59e0b;
-      animation: pulseDot 1.5s infinite;
-    }
-
-    .server-status-pill.offline .status-indicator-dot {
-      background: #ef4444;
-      box-shadow: 0 0 8px #ef4444;
-    }
-
-    @keyframes pulseDot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.3; transform: scale(0.85); }
     }
 
     .user-profile-bar {
@@ -865,20 +818,13 @@
   <div class="screen-view active" id="lobby-screen">
     <div class="lobby-header">
       <div class="brand-large">
-        🌲 <span class="brand-gradient">Escanaba</span> Guessr
+        🌲 <span class="brand-gradient">Esky</span> GeoGuessr
       </div>
 
-      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <div id="backend-status-pill" class="server-status-pill connecting" title="Click to view/change Render Backend URL">
-          <span class="status-indicator-dot"></span>
-          <span id="backend-status-text">Connecting...</span>
-        </div>
-
-        <div class="user-profile-bar">
-          <span class="tag">Player:</span>
-          <input type="text" id="username-input" placeholder="Your Username" maxlength="16">
-          <span>✏️</span>
-        </div>
+      <div class="user-profile-bar">
+        <span class="tag">Player:</span>
+        <input type="text" id="username-input" placeholder="Choose a name..." maxlength="16">
+        <span>✏️</span>
       </div>
     </div>
 
@@ -1046,9 +992,6 @@
           <option value="5" selected>5 Rounds per Game (Standard)</option>
           <option value="10">10 Rounds per Game</option>
         </select>
-        <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
-          * Exactly 1 guess per round (Standard GeoGuessr rules).
-        </span>
       </div>
 
       <div class="modal-actions">
@@ -1092,29 +1035,6 @@
     </div>
   </div>
 
-  <!-- MODAL: BACKEND SERVER SETTINGS (For GitHub Pages -> Render) -->
-  <div class="modal-overlay" id="server-modal">
-    <div class="modal-card" style="max-width: 440px;">
-      <h2>Render Backend Connection</h2>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
-        To play online multiplayer via GitHub Pages, enter your Render Web Service URL below.
-      </p>
-
-      <div class="form-group">
-        <label for="server-url-input">Render Service URL</label>
-        <input type="text" id="server-url-input" placeholder="https://your-service.onrender.com" autocomplete="off">
-        <span style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">
-          Note: Free Render web services spin down after inactivity and take ~30–50s to wake up on first load.
-        </span>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn btn-secondary" id="cancel-server-btn">Cancel</button>
-        <button class="btn btn-primary" id="save-server-btn">Save & Connect</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Loading Screen -->
   <div class="loading-overlay" id="loading-overlay">
     <div class="spinner"></div>
@@ -1125,30 +1045,21 @@
     /* ====================================================================
        CLIENT STATE & SOCKET INITIALIZATION
        ==================================================================== */
-    // Determine Backend URL:
-    // 1. URL search param ?server=https://...
-    // 2. localStorage saved setting
-    // 3. Optional baked-in DEFAULT_RENDER_URL
-    // 4. Localhost fallback
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryServer = urlParams.get('server') || urlParams.get('backend');
-    if (queryServer) {
-      localStorage.setItem("escanaba_backend_url", queryServer.replace(/\/+$/, ''));
-    }
+    // ====================================================================
+    // HARDSET RENDER BACKEND URL
+    // Replace this string with your live Render backend URL:
+    // e.g. "https://esky-geoguessr-backend.onrender.com"
+    // ====================================================================
+    const RENDER_BACKEND_URL = "https://esky-geoguessr-backend.onrender.com";
 
-    // You can paste your deployed Render URL here so players don't have to enter it:
-    const DEFAULT_RENDER_URL = "https://esky-geoguessr-backend.onrender.com"; 
-    let backendUrl = localStorage.getItem("escanaba_backend_url") || DEFAULT_RENDER_URL;
-
-    if (!backendUrl) {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
-        backendUrl = 'http://localhost:3000';
-      }
-    }
+    // Auto-detect localhost if running locally, otherwise use hardset RENDER_BACKEND_URL
+    const backendUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3000'
+      : RENDER_BACKEND_URL.replace(/\/+$/, '');
 
     let socket = null;
     let serverMapillaryToken = "";
-    let myUsername = localStorage.getItem("escanaba_username") || `Yooper_${Math.floor(100 + Math.random() * 900)}`;
+    let myUsername = localStorage.getItem("escanaba_username") || "";
     let currentRoom = null;
     let pendingJoinRoomId = null;
 
@@ -1173,13 +1084,6 @@
 
     // DOM References
     const usernameInput = document.getElementById("username-input");
-    const backendStatusPill = document.getElementById("backend-status-pill");
-    const backendStatusText = document.getElementById("backend-status-text");
-    const serverModal = document.getElementById("server-modal");
-    const serverUrlInput = document.getElementById("server-url-input");
-    const cancelServerBtn = document.getElementById("cancel-server-btn");
-    const saveServerBtn = document.getElementById("save-server-btn");
-
     const lobbyScreen = document.getElementById("lobby-screen");
     const waitingRoomScreen = document.getElementById("waiting-room-screen");
     const gameScreen = document.getElementById("game-screen");
@@ -1236,9 +1140,15 @@
        INITIALIZATION & CONFIG
        ==================================================================== */
     window.addEventListener("DOMContentLoaded", () => {
-      usernameInput.value = myUsername;
+      if (myUsername) {
+        usernameInput.value = myUsername;
+      }
+      usernameInput.addEventListener("input", (e) => {
+        myUsername = e.target.value.trim();
+        localStorage.setItem("escanaba_username", myUsername);
+      });
       usernameInput.addEventListener("change", (e) => {
-        myUsername = e.target.value.trim() || myUsername;
+        myUsername = e.target.value.trim();
         localStorage.setItem("escanaba_username", myUsername);
       });
 
@@ -1249,29 +1159,30 @@
       initBackend(backendUrl);
     });
 
-    function updateBackendStatus(state, text) {
-      if (!backendStatusPill || !backendStatusText) return;
-      backendStatusPill.className = `server-status-pill ${state}`;
-      backendStatusText.innerText = text;
+    function checkUsername() {
+      const name = usernameInput.value.trim();
+      if (!name) {
+        alert("Please choose a player name first!");
+        usernameInput.focus();
+        return false;
+      }
+      myUsername = name;
+      localStorage.setItem("escanaba_username", name);
+      return true;
     }
 
     function initBackend(url) {
-      if (!url) {
-        updateBackendStatus('offline', 'Set Render URL');
+      if (!url || url.includes("your-service.onrender.com")) {
         roomsGrid.innerHTML = `
           <div class="empty-rooms-msg">
-            <div style="font-size: 1.2rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Render Backend Not Connected</div>
-            <p style="color: var(--text-muted); margin-bottom: 16px;">Click the button below to connect to your hosted Render backend.</p>
-            <button class="btn btn-primary" onclick="openServerModal()">Connect to Render Backend</button>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Connecting to Server...</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              Set your live Render backend URL in <code>index.html</code> (RENDER_BACKEND_URL).
+            </p>
           </div>
         `;
         return;
       }
-
-      url = url.replace(/\/+$/, '');
-      backendUrl = url;
-      localStorage.setItem("escanaba_backend_url", url);
-      updateBackendStatus('connecting', 'Connecting...');
 
       // Wake up Render instance (GET /api/config)
       fetch(`${url}/api/config`)
@@ -1281,8 +1192,8 @@
             serverMapillaryToken = cfg.token;
           }
         })
-        .catch(() => {
-          updateBackendStatus('connecting', 'Waking Render (~30s)...');
+        .catch(err => {
+          console.warn("Waking Render backend...", err);
         });
 
       if (socket) {
@@ -1296,26 +1207,11 @@
       });
 
       socket.on('connect', () => {
-        updateBackendStatus('online', 'Server Online');
         socket.emit('get_rooms');
-      });
-
-      socket.on('connect_error', () => {
-        updateBackendStatus('connecting', 'Waking server (~30s)...');
-      });
-
-      socket.on('disconnect', () => {
-        updateBackendStatus('offline', 'Disconnected');
       });
 
       bindSocketEvents();
     }
-
-    window.openServerModal = function() {
-      serverUrlInput.value = backendUrl || "";
-      serverModal.classList.add("active");
-      serverUrlInput.focus();
-    };
 
     function showScreen(screen) {
       [lobbyScreen, waitingRoomScreen, gameScreen].forEach(s => s.classList.remove('active'));
@@ -1367,20 +1263,6 @@
        UI EVENT LISTENERS
        ==================================================================== */
     function bindUIEvents() {
-      backendStatusPill.addEventListener("click", () => openServerModal());
-
-      cancelServerBtn.addEventListener("click", () => {
-        serverModal.classList.remove("active");
-      });
-
-      saveServerBtn.addEventListener("click", () => {
-        const val = serverUrlInput.value.trim();
-        if (val) {
-          initBackend(val);
-        }
-        serverModal.classList.remove("active");
-      });
-
       refreshRoomsBtn.addEventListener("click", () => {
         if (socket && socket.connected) {
           socket.emit('get_rooms');
@@ -1390,6 +1272,7 @@
       });
 
       openCreateRoomModalBtn.addEventListener("click", () => {
+        if (!checkUsername()) return;
         createRoomModal.classList.add("active");
       });
 
@@ -1398,6 +1281,7 @@
       });
 
       confirmCreateRoomBtn.addEventListener("click", () => {
+        if (!checkUsername()) return;
         const name = document.getElementById("create-room-name").value;
         const passcode = document.getElementById("create-room-passcode").value;
         const maxPlayers = document.getElementById("create-max-players").value;
@@ -1422,6 +1306,7 @@
       });
 
       confirmPasscodeBtn.addEventListener("click", () => {
+        if (!checkUsername()) return;
         const code = joinPasscodeInput.value;
         if (pendingJoinRoomId) {
           socket.emit('join_room', {
@@ -1432,6 +1317,7 @@
         }
         passcodeModal.classList.remove("active");
         joinPasscodeInput.value = "";
+        pendingJoinRoomId = null;
       });
 
       startGameBtn.addEventListener("click", () => {
@@ -1527,6 +1413,7 @@
     }
 
     window.attemptJoinRoom = function(roomId, hasPasscode) {
+      if (!checkUsername()) return;
       if (hasPasscode) {
         pendingJoinRoomId = roomId;
         passcodeModal.classList.add("active");
